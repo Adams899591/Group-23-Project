@@ -32,67 +32,118 @@
             'chevron'  => 'M19.5 8.25l-7.5 7.5-7.5-7.5',
         ];
 
-        // ---- Top 5 stat cards ----
-        // 'color' decides if the % is green (good) or red (bad)
-        $stats = [
-            ['label' => 'Total Applicants',     'value' => 1000, 'change' => '12%', 'dir' => 'up',   'color' => 'green', 'icon' => 'users',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Total Applications',   'value' => 1487, 'change' => '15%', 'dir' => 'up',   'color' => 'green', 'icon' => 'document', 'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
-            ['label' => 'Admitted Applications','value' => 892,  'change' => '18%', 'dir' => 'up',   'color' => 'green', 'icon' => 'check',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Rejected Applications','value' => 312,  'change' => '6%',  'dir' => 'up',   'color' => 'red',   'icon' => 'x',        'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
-            ['label' => 'Pending Applications', 'value' => 283,  'change' => '10%', 'dir' => 'down', 'color' => 'green', 'icon' => 'clock',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-        ];
+
+        // =================== Applications by Academic Session ==================
+        // Fetch the Session Dunamically from the dtabase 
+        $sessionNames = \App\Models\AcademicSession::pluck("name")->toArray();
+
+        //Fetch all the Academic Session 
+        $sessionList = \App\Models\AcademicSession::all();
+
+         $sessionNames = [];
+         $applicationCounts = [];
+         $admittedCounts = [];
+
+        foreach ($sessionList as $session) {
+        $sessionNames[] = $session->name;
+
+        // Count how many Application belongs to a specific session ID
+        $applicationCounts[] =  \App\Models\Application::where("academic_session_id", $session->id)->count();
+
+        // Admitted application for this session
+        $admittedCounts[] = \App\Models\Application::where("academic_session_id", $session->id)
+                            ->where("application_status", "admitted")
+                            ->count();
+        }
 
         // ---- Applications by Academic Session (bar chart) ----
         $sessions = [
-            'labels'       => ['2022/2023', '2023/2024', '2024/2025', '2025/2026'],
-            'applications' => [320, 385, 421, 361],
-            'admitted'     => [210, 265, 298, 256],
+            'labels'       => $sessionNames,
+            'applications' => $applicationCounts,
+            'admitted'     => $admittedCounts,
         ];
+        // ==================================
 
-        // ---- Applications by Faculty (doughnut) ----
-        $faculties = [
-            ['name' => 'Faculty of Computing',            'count' => 416, 'color' => '#0a5c2e'],
-            ['name' => 'Faculty of Engineering',          'count' => 267, 'color' => '#b8923e'],
-            ['name' => 'Faculty of Science',              'count' => 238, 'color' => '#4fa86f'],
-            ['name' => 'Faculty of Management Sciences',  'count' => 208, 'color' => '#e3d3b5'],
-            ['name' => 'Faculty of Social Sciences',      'count' => 178, 'color' => '#2b2f2e'],
-        ];
-        $totalApplications = collect($faculties)->sum('count'); // 1,307 here: use your real total
+
+
+
+
+
+        // =================== Applications by Faculty (doughnut) ==================
+        $colors = ['#0a5c2e', '#b8923e', '#4fa86f', '#e3d3b5', '#2b2f2e'];
+
+        $facultiesList = \App\Models\Faculty::all();
+
+        $faculties = [];
+
+        foreach ($facultiesList as $index => $faculty) {
+            // Count applications linked to programmes/departments under this faculty
+            $count = \App\Models\Application::whereHas('programme.department', function ($query) use ($faculty) {
+                $query->where('faculty_id', $faculty->id);
+            })->count();
+
+             // ---- Applications by Faculty (doughnut) ----
+            $faculties[] = [
+                'name'  => $faculty->name,
+                'count' => $count,
+                'color' => $colors[$index % count($colors)],
+            ];
+        }
+
+        $totalApplications = collect($faculties)->sum('count');
+        // ============================
+
+
+
+    
 
         // ---- Gender distribution ----
-        $male   = 580;
-        $female = 420;
+        // Count the male and female application directly from the database 
+        $male = \App\Models\Applicant::where("gender", "Male")->count();
+        $female = \App\Models\Applicant::where("gender", "Female")->count();
         $genderTotal = $male + $female;
 
+
+
         // ---- Most applied-for programmes ----
-        $programmes = [
-            ['name' => 'B.Sc. Computer Science',         'count' => 242, 'percent' => 16],
-            ['name' => 'B.Sc. Software Engineering',     'count' => 198, 'percent' => 13],
-            ['name' => 'B.Eng. Civil Engineering',       'count' => 156, 'percent' => 10],
-            ['name' => 'B.Sc. Accounting',               'count' => 142, 'percent' => 9],
-            ['name' => 'B.Sc. Business Administration',  'count' => 118, 'percent' => 8],
-        ];
+        $totalApplicationsCount = \App\Models\Application::count();
+
+        $programmes = \App\Models\Programme::withCount('applications')
+            ->orderBy('applications_count', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($programme) use ($totalApplicationsCount) {
+                $count = $programme->applications_count;
+                $percent = $totalApplicationsCount > 0 ? round(($count / $totalApplicationsCount) * 100) : 0;
+                
+                return [
+                    'name' => $programme->name,
+                    'count' => $count,
+                    'percent' => $percent,
+                ];
+            })
+            ->toArray();
+
         $maxProgramme = collect($programmes)->max('count');
 
-        // ---- Programme capacity ----
-        $capacity  = 4850;
-        $admitted  = 3781;
-        $remaining = $capacity - $admitted;
-        $utilisation = round(($admitted / $capacity) * 100);
 
-        // ---- Recent applications table ----
-        $recent = [
-            ['no' => 'APPN0001245', 'name' => 'Usman Ahmed',     'programme' => 'B.Sc. Computer Science',       'session' => '2025/2026', 'status' => 'Admitted', 'date' => '2025-04-18'],
-            ['no' => 'APPN0001244', 'name' => 'Aisha Ibrahim',   'programme' => 'B.Eng. Electrical Engineering','session' => '2025/2026', 'status' => 'Pending',  'date' => '2025-04-17'],
-            ['no' => 'APPN0001243', 'name' => 'Musa Bello',      'programme' => 'B.Sc. Accounting',             'session' => '2025/2026', 'status' => 'Rejected', 'date' => '2025-04-16'],
-            ['no' => 'APPN0001242', 'name' => 'Fatima Sani',     'programme' => 'B.Sc. Mathematics',            'session' => '2025/2026', 'status' => 'Admitted', 'date' => '2025-04-15'],
-            ['no' => 'APPN0001241', 'name' => 'Ibrahim Yusuf',   'programme' => 'B.Sc. Business Administration','session' => '2025/2026', 'status' => 'Pending',  'date' => '2025-04-14'],
-        ];
-        $statusClass = [
-            'Admitted' => 'bg-green-100 text-green-800 border-green-300',
-            'Pending'  => 'bg-yellow-100 text-yellow-800 border-yellow-300',
-            'Rejected' => 'bg-red-100 text-red-700 border-red-300',
-        ];
+
+        // ---- Programme capacity ----
+        // Sum total capacity across all programmes (or set a fixed total if you prefer)
+        $capacity = \App\Models\Programme::sum('duration_years'); 
+        // Fallback if capacity column doesn't exist yet: use a fixed number like 4850
+
+        // Count total admitted applications from the database
+        $admitted = \App\Models\Application::where('application_status', 'admitted')->count();
+
+        $remaining = max(0, $capacity - $admitted);
+        $utilisation = $capacity > 0 ? round(($admitted / $capacity) * 100) : 0;
+
+        // $capacity  = 4850;
+        // $admitted  = 3781;
+        // $remaining = $capacity - $admitted;
+        // $utilisation = round(($admitted / $capacity) * 100);
+
     @endphp
 
 
@@ -104,7 +155,8 @@
         {{-- ============================================================
              3b. WELCOME MESSAGE + DATE
         ============================================================= --}}
-        <section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <livewire:import.welcome-message>
+        {{-- <section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Welcome back, Admin 👋</h1>
                 <p class="text-sm text-slate-500">Here's what's happening at Federal University Dutsin-Ma</p>
@@ -118,38 +170,13 @@
                     <p>{{ now()->format('h:i A') }}</p>
                 </div>
             </div>
-        </section>
+        </section> --}}
 
 
         {{-- ============================================================
              3c. STAT CARDS (5 cards on top)
         ============================================================= --}}
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            @foreach ($stats as $stat)
-                <div class="rounded-xl border p-4 {{ $stat['card'] }}">
-                    <div class="flex items-center gap-4">
-                        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white {{ $stat['iconBg'] }}">
-                            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$stat['icon']] }}" />
-                            </svg>
-                        </span>
-                        <div>
-                            <p class="text-xs font-medium text-slate-700">{{ $stat['label'] }}</p>
-                            <p class="text-3xl font-bold text-slate-900">{{ number_format($stat['value']) }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center gap-2 text-xs">
-                        <span class="flex items-center gap-1 font-semibold {{ $stat['color'] === 'green' ? 'text-green-700' : 'text-red-600' }}">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$stat['dir']] }}" />
-                            </svg>
-                            {{ $stat['change'] }}
-                        </span>
-                        <span class="text-slate-500">vs last session</span>
-                    </div>
-                </div>
-            @endforeach
-        </section>
+        <livewire:import.start-cards>
 
 
         {{-- ============================================================
@@ -281,47 +308,7 @@
         {{-- ============================================================
              3f. RECENT APPLICATIONS TABLE
         ============================================================= --}}
-        <section class="rounded-xl border border-slate-200 bg-white p-5">
-            <div class="flex items-center justify-between">
-                <h2 class="font-semibold text-slate-900">Recent Applications</h2>
-                <a href="#" class="flex items-center gap-1 text-xs font-medium text-[#0a5c2e] underline">
-                    View All
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['right'] }}" />
-                    </svg>
-                </a>
-            </div>
-
-            <div class="mt-3 overflow-x-auto">
-                <table class="w-full min-w-[700px] text-left text-xs">
-                    <thead class="bg-slate-50 text-slate-700">
-                        <tr>
-                            <th class="px-3 py-2 font-semibold">Application No.</th>
-                            <th class="px-3 py-2 font-semibold">Applicant Name</th>
-                            <th class="px-3 py-2 font-semibold">Programme</th>
-                            <th class="px-3 py-2 font-semibold">Academic Session</th>
-                            <th class="px-3 py-2 font-semibold">Status</th>
-                            <th class="px-3 py-2 font-semibold">Application Date</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @foreach ($recent as $row)
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-3 py-3 text-[#0a5c2e]">{{ $row['no'] }}</td>
-                                <td class="px-3 py-3 text-slate-700">{{ $row['name'] }}</td>
-                                <td class="px-3 py-3 text-slate-700">{{ $row['programme'] }}</td>
-                                <td class="px-3 py-3 text-slate-700">{{ $row['session'] }}</td>
-                                <td class="px-3 py-3">
-                                    <span class="rounded-full border px-3 py-0.5 font-medium {{ $statusClass[$row['status']] }}">{{ $row['status'] }}</span>
-                                </td>
-                                <td class="px-3 py-3 text-slate-700">{{ $row['date'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
+        <livewire:import.recent-application>
 
     </main>
 

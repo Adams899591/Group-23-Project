@@ -6,5 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    //
+       protected $guarded = [];
+
+   // ======== Relationship ==========
+   public function faculty(){
+      return $this->belongsTo(Faculty::class);
+   }
 }
