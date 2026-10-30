@@ -1,8 +1,10 @@
 <?php
 
+use App\Livewire\AcademicSessions;
 use App\Livewire\Applicants;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
+use App\Livewire\Programmes;
 
 Route::get('/', function () {
     return view('welcome');
@@ -13,6 +15,8 @@ Route::get('/', function () {
 Route::prefix("fudma")->group(function(){
     Route::get('/dashboard', Dashboard::class)->name("dashboard");
     Route::get('/applicants', Applicants::class)->name("applicants");
+    Route::get('/programmes', Programmes::class)->name("programmes");
+    Route::get('/academicSessions', AcademicSessions::class)->name("academicSessions");
 });
 
 

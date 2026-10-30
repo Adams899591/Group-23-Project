@@ -26,20 +26,27 @@
 
         // Badge colours for each status
         $statusClass = [
-            'Admitted' => 'bg-green-100 text-green-800 border-green-300',
-            'Pending'  => 'bg-yellow-100 text-yellow-800 border-yellow-300',
-            'Rejected' => 'bg-red-100 text-red-700 border-red-300',
+            'admitted' => 'bg-green-100 text-green-800 border-green-300',
+            'pending'  => 'bg-yellow-100 text-yellow-800 border-yellow-300',
+            'rejected' => 'bg-red-100 text-red-700 border-red-300',
         ];
 
         // The 4 summary cards. 'filter' is the status that gets applied when you click the card.
         $cards = [
             ['label' => 'Total Applications', 'value' => $counts['total'],    'filter' => '',         'icon' => 'document', 'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Admitted',           'value' => $counts['Admitted'], 'filter' => 'Admitted', 'icon' => 'check',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Pending',            'value' => $counts['Pending'],  'filter' => 'Pending',  'icon' => 'clock',    'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
-            ['label' => 'Rejected',           'value' => $counts['Rejected'], 'filter' => 'Rejected', 'icon' => 'x',        'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
+            ['label' => 'Admitted',           'value' => $counts['admitted'], 'filter' => 'admitted', 'icon' => 'check',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
+            ['label' => 'Pending',            'value' => $counts['pending'],  'filter' => 'pending',  'icon' => 'clock',    'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
+            ['label' => 'Rejected',           'value' => $counts['rejected'], 'filter' => 'rejected', 'icon' => 'x',        'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
         ];
 
-        $hasFilters = $status !== '' || $search !== '' || $session !== '2025/2026';
+        $hasFilters = $status !== '' || $search !== '' || $session !== '';
+
+        // Numbers taken from the paginator that Applicants.php sends ($applications)
+        $total    = $applications->total();
+        $page     = $applications->currentPage();
+        $lastPage = $applications->lastPage();
+        $from     = $applications->firstItem() ?? 0;
+        $to       = $applications->lastItem() ?? 0;
     @endphp
 
 
@@ -112,7 +119,7 @@
                 <div class="relative">
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['search'] }}" /></svg>
                     <input id="search" type="text" wire:model.live.debounce.400ms="search"
-                           placeholder="Name, application no. or programme"
+                           placeholder="Name, applicant no., application no. or programme"
                            class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 placeholder-slate-400 focus:border-[#0a5c2e] focus:outline-none focus:ring-2 focus:ring-[#0a5c2e]/20">
                 </div>
             </div>
@@ -139,9 +146,9 @@
                     <select id="status" wire:model.live="status"
                             class="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm text-slate-800 focus:border-[#0a5c2e] focus:outline-none focus:ring-2 focus:ring-[#0a5c2e]/20">
                         <option value="">All Statuses</option>
-                        <option value="Admitted">Admitted</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Rejected">Rejected</option>
+                        <option value="admitted">Admitted</option>
+                        <option value="pending">Pending</option>
+                        <option value="rejected">Rejected</option>
                     </select>
                     <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['chevron'] }}" /></svg>
                 </div>
@@ -208,31 +215,31 @@
                 </thead>
 
                 <tbody class="divide-y divide-slate-100">
-                    @forelse ($rows as $row)
-                        <tr wire:key="app-{{ $row['no'] }}" class="hover:bg-slate-50">
-                            <td class="whitespace-nowrap px-5 py-3.5 font-medium text-[#0a5c2e]">{{ $row['no'] }}</td>
+                    @forelse ($applications as $row)
+                        <tr wire:key="app-{{ $row->id }}" class="hover:bg-slate-50">
+                            <td class="whitespace-nowrap px-5 py-3.5 font-medium text-[#0a5c2e]">{{ $row->application_number }}</td>
 
-                            {{-- Applicant: initials avatar + name + email --}}
+                            {{-- Applicant: initials avatar + full name + applicant number --}}
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e9f5ee] text-xs font-semibold text-[#0a5c2e]">
-                                        {{ collect(explode(' ', $row['name']))->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->implode('') }}
+                                        {{ $row->applicant->initials }}
                                     </span>
                                     <div class="leading-tight">
-                                        <p class="font-medium text-slate-900">{{ $row['name'] }}</p>
-                                        <p class="text-xs text-slate-500">{{ $row['email'] }}</p>
+                                        <p class="font-medium text-slate-900">{{ $row->applicant->full_name }}</p>
+                                        <p class="text-xs text-slate-500">{{ $row->applicant->applicant_number }}</p>
                                     </div>
                                 </div>
                             </td>
 
-                            <td class="px-5 py-3.5 text-slate-700">{{ $row['programme'] }}</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-700">{{ $row['session'] }}</td>
+                            <td class="px-5 py-3.5 text-slate-700">{{ $row->programme->name }}</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-700">{{ $row->academicSession->name }}</td>
 
                             <td class="px-5 py-3.5">
-                                <span class="inline-block rounded-full border px-3 py-0.5 text-xs font-medium {{ $statusClass[$row['status']] }}">{{ $row['status'] }}</span>
+                                <span class="inline-block rounded-full border px-3 py-0.5 text-xs font-medium {{ $statusClass[$row->application_status] ?? 'bg-slate-100 text-slate-700 border-slate-300' }}">{{ ucfirst($row->application_status) }}</span>
                             </td>
 
-                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-700">{{ \Carbon\Carbon::parse($row['date'])->format('d M Y') }}</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-slate-700">{{ $row->application_date->format('d M Y') }}</td>
 
                             {{-- Row actions (point the hrefs to your real routes) --}}
                             <td class="px-5 py-3.5">

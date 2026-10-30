@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $applicantCount = 1000; // Change to 5000 for 5,000 applicants.
+        $applicantCount = 50; // Change to 5000 for 5,000 applicants.
         $applicationsPerApplicant = 2; // Each applicant gets 1–2 applications.
         $batchSize = 500; // Number of records inserted per batch.
 

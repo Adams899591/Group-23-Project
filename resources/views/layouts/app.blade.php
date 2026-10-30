@@ -62,11 +62,11 @@
         $menu = [
             ['label' => 'Dashboard',         'icon' => 'home',     'href' => 'dashboard',         'pattern' => 'dashboard*'],
             ['label' => 'Applicants',        'icon' => 'users',    'href' => 'applicants',        'pattern' => 'applicants*'],
-            ['label' => 'Applications',      'icon' => 'document', 'href' => 'dashboard',      'pattern' => 'applications*'],
-            ['label' => 'Programmes',        'icon' => 'cap',      'href' => 'dashboard',        'pattern' => 'programmes*'],
-            ['label' => 'Departments',       'icon' => 'library',  'href' => 'dashboard',       'pattern' => 'departments*'],
-            ['label' => 'Faculties',         'icon' => 'office',   'href' => 'dashboard',         'pattern' => 'faculties*'],
-            ['label' => 'Academic Sessions', 'icon' => 'calendar', 'href' => 'dashboard', 'pattern' => 'academic-sessions*'],
+            ['label' => 'Applications',      'icon' => 'document', 'href' => 'applicants',      'pattern' => 'applications*'],
+            ['label' => 'Programmes',        'icon' => 'cap',      'href' => 'programmes',        'pattern' => 'programmes*'],
+            ['label' => 'Departments',       'icon' => 'library',  'href' => 'programmes',       'pattern' => 'departments*'],
+            ['label' => 'Faculties',         'icon' => 'office',   'href' => 'programmes',         'pattern' => 'faculties*'],
+            ['label' => 'Academic Sessions', 'icon' => 'calendar', 'href' => 'academicSessions', 'pattern' => 'academicSessions*'],
             ['label' => 'Reports',           'icon' => 'chart',    'href' => 'dashboard',           'pattern' => 'reports*'],
             ['label' => 'Settings',          'icon' => 'settings', 'href' => 'dashboard',          'pattern' => 'settings*'],
         ];
