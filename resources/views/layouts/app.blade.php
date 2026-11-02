@@ -11,6 +11,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ $title ?? 'Dashboard' }} | Federal University Dutsin-Ma</title>
+    <link rel="icon" type="image/png" href="{{asset("images/logo.jpg")}}" style="border-radius: 50%">
+
 
     {{-- Font (Inter) --}}
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -98,7 +100,7 @@
         <nav class="flex-1 space-y-1 px-3 pt-2">
             @foreach ($menu as $item)
                 @php $active = request()->is($item['pattern']); @endphp
-                <a href="{{ route($item['href']) }}"
+                <a href="{{ route($item['href']) }}" wire:navigate
                    class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition
                           {{ $active ? 'bg-[#0f7a3d] text-white shadow' : 'text-green-50/90 hover:bg-white/10' }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">

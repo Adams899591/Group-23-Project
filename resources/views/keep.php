@@ -1,4 +1,8 @@
-{{-- <div x-data="{ sidebarOpen: false }" class="min-h-screen">
+{{-- 
+    FILE: resources/views/livewire/dashboard.blade.php
+    Livewire requires ONE root element, so everything is inside this single <div>.
+--}}
+<div class="min-h-screen">
 
     {{-- =====================================================================
          0. DATA (all numbers are placeholders. Replace with your database
@@ -28,414 +32,271 @@
             'chevron'  => 'M19.5 8.25l-7.5 7.5-7.5-7.5',
         ];
 
-        // ---- Sidebar menu ----
-        $menu = [
-            ['label' => 'Dashboard',         'icon' => 'home',     'href' => '#', 'active' => true],
-            ['label' => 'Applicants',        'icon' => 'users',    'href' => '#', 'active' => false],
-            ['label' => 'Applications',      'icon' => 'document', 'href' => '#', 'active' => false],
-            ['label' => 'Programmes',        'icon' => 'cap',      'href' => '#', 'active' => false],
-            ['label' => 'Departments',       'icon' => 'library',  'href' => '#', 'active' => false],
-            ['label' => 'Faculties',         'icon' => 'office',   'href' => '#', 'active' => false],
-            ['label' => 'Academic Sessions', 'icon' => 'calendar', 'href' => '#', 'active' => false],
-            ['label' => 'Reports',           'icon' => 'chart',    'href' => '#', 'active' => false],
-            ['label' => 'Settings',          'icon' => 'settings', 'href' => '#', 'active' => false],
-        ];
 
-        // ---- Top 5 stat cards ----
-        // 'color' decides if the % is green (good) or red (bad)
-        $stats = [
-            ['label' => 'Total Applicants',     'value' => 1000, 'change' => '12%', 'dir' => 'up',   'color' => 'green', 'icon' => 'users',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Total Applications',   'value' => 1487, 'change' => '15%', 'dir' => 'up',   'color' => 'green', 'icon' => 'document', 'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
-            ['label' => 'Admitted Applications','value' => 892,  'change' => '18%', 'dir' => 'up',   'color' => 'green', 'icon' => 'check',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-            ['label' => 'Rejected Applications','value' => 312,  'change' => '6%',  'dir' => 'up',   'color' => 'red',   'icon' => 'x',        'card' => 'bg-[#faf3ea] border-[#f0e4d2]', 'iconBg' => 'bg-[#b8923e]'],
-            ['label' => 'Pending Applications', 'value' => 283,  'change' => '10%', 'dir' => 'down', 'color' => 'green', 'icon' => 'clock',    'card' => 'bg-[#e9f5ee] border-[#d3eadb]', 'iconBg' => 'bg-[#0a5c2e]'],
-        ];
+        // =================== Applications by Academic Session ==================
+        // Fetch the Session Dunamically from the dtabase 
+        $sessionNames = \App\Models\AcademicSession::pluck("name")->toArray();
+
+        //Fetch all the Academic Session 
+        $sessionList = \App\Models\AcademicSession::all();
+
+         $sessionNames = [];
+         $applicationCounts = [];
+         $admittedCounts = [];
+
+        foreach ($sessionList as $session) {
+        $sessionNames[] = $session->name;
+
+        // Count how many Application belongs to a specific session ID
+        $applicationCounts[] =  \App\Models\Application::where("academic_session_id", $session->id)->count();
+
+        // Admitted application for this session
+        $admittedCounts[] = \App\Models\Application::where("academic_session_id", $session->id)
+                            ->where("application_status", "admitted")
+                            ->count();
+        }
 
         // ---- Applications by Academic Session (bar chart) ----
         $sessions = [
-            'labels'       => ['2022/2023', '2023/2024', '2024/2025', '2025/2026'],
-            'applications' => [320, 385, 421, 361],
-            'admitted'     => [210, 265, 298, 256],
+            'labels'       => $sessionNames,
+            'applications' => $applicationCounts,
+            'admitted'     => $admittedCounts,
         ];
+        // ==================================
 
-        // ---- Applications by Faculty (doughnut) ----
-        $faculties = [
-            ['name' => 'Faculty of Computing',            'count' => 416, 'color' => '#0a5c2e'],
-            ['name' => 'Faculty of Engineering',          'count' => 267, 'color' => '#b8923e'],
-            ['name' => 'Faculty of Science',              'count' => 238, 'color' => '#4fa86f'],
-            ['name' => 'Faculty of Management Sciences',  'count' => 208, 'color' => '#e3d3b5'],
-            ['name' => 'Faculty of Social Sciences',      'count' => 178, 'color' => '#2b2f2e'],
-        ];
-        $totalApplications = collect($faculties)->sum('count'); // 1,307 here: use your real total
+
+
+
+
+
+        // =================== Applications by Faculty (doughnut) ==================
+        $colors = ['#0a5c2e', '#b8923e', '#4fa86f', '#e3d3b5', '#2b2f2e'];
+
+        $facultiesList = \App\Models\Faculty::all();
+
+        $faculties = [];
+
+        foreach ($facultiesList as $index => $faculty) {
+            // Count applications linked to programmes/departments under this faculty
+            $count = \App\Models\Application::whereHas('programme.department', function ($query) use ($faculty) {
+                $query->where('faculty_id', $faculty->id);
+            })->count();
+
+             // ---- Applications by Faculty (doughnut) ----
+            $faculties[] = [
+                'name'  => $faculty->name,
+                'count' => $count,
+                'color' => $colors[$index % count($colors)],
+            ];
+        }
+
+        $totalApplications = collect($faculties)->sum('count');
+        // ============================
+
+
+
+    
 
         // ---- Gender distribution ----
-        $male   = 580;
-        $female = 420;
+        // Count the male and female application directly from the database 
+        $male = \App\Models\Applicant::where("gender", "Male")->count();
+        $female = \App\Models\Applicant::where("gender", "Female")->count();
         $genderTotal = $male + $female;
 
+
+
         // ---- Most applied-for programmes ----
-        $programmes = [
-            ['name' => 'B.Sc. Computer Science',         'count' => 242, 'percent' => 16],
-            ['name' => 'B.Sc. Software Engineering',     'count' => 198, 'percent' => 13],
-            ['name' => 'B.Eng. Civil Engineering',       'count' => 156, 'percent' => 10],
-            ['name' => 'B.Sc. Accounting',               'count' => 142, 'percent' => 9],
-            ['name' => 'B.Sc. Business Administration',  'count' => 118, 'percent' => 8],
-        ];
+        $totalApplicationsCount = \App\Models\Application::count();
+
+        $programmes = \App\Models\Programme::withCount('applications')
+            ->orderBy('applications_count', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($programme) use ($totalApplicationsCount) {
+                $count = $programme->applications_count;
+                $percent = $totalApplicationsCount > 0 ? round(($count / $totalApplicationsCount) * 100) : 0;
+                
+                return [
+                    'name' => $programme->name,
+                    'count' => $count,
+                    'percent' => $percent,
+                ];
+            })
+            ->toArray();
+
         $maxProgramme = collect($programmes)->max('count');
 
-        // ---- Programme capacity ----
-        $capacity  = 4850;
-        $admitted  = 3781;
-        $remaining = $capacity - $admitted;
-        $utilisation = round(($admitted / $capacity) * 100);
 
-        // ---- Recent applications table ----
-        $recent = [
-            ['no' => 'APPN0001245', 'name' => 'Usman Ahmed',     'programme' => 'B.Sc. Computer Science',       'session' => '2025/2026', 'status' => 'Admitted', 'date' => '2025-04-18'],
-            ['no' => 'APPN0001244', 'name' => 'Aisha Ibrahim',   'programme' => 'B.Eng. Electrical Engineering','session' => '2025/2026', 'status' => 'Pending',  'date' => '2025-04-17'],
-            ['no' => 'APPN0001243', 'name' => 'Musa Bello',      'programme' => 'B.Sc. Accounting',             'session' => '2025/2026', 'status' => 'Rejected', 'date' => '2025-04-16'],
-            ['no' => 'APPN0001242', 'name' => 'Fatima Sani',     'programme' => 'B.Sc. Mathematics',            'session' => '2025/2026', 'status' => 'Admitted', 'date' => '2025-04-15'],
-            ['no' => 'APPN0001241', 'name' => 'Ibrahim Yusuf',   'programme' => 'B.Sc. Business Administration','session' => '2025/2026', 'status' => 'Pending',  'date' => '2025-04-14'],
-        ];
-        $statusClass = [
-            'Admitted' => 'bg-green-100 text-green-800 border-green-300',
-            'Pending'  => 'bg-yellow-100 text-yellow-800 border-yellow-300',
-            'Rejected' => 'bg-red-100 text-red-700 border-red-300',
-        ];
+
+        // ---- Programme capacity ----
+        // Sum total capacity across all programmes (or set a fixed total if you prefer)
+        $capacity = \App\Models\Programme::sum('duration_years'); 
+        // Fallback if capacity column doesn't exist yet: use a fixed number like 4850
+
+        // Count total admitted applications from the database
+        $admitted = \App\Models\Application::where('application_status', 'admitted')->count();
+
+        $remaining = max(0, $capacity - $admitted);
+        $utilisation = $capacity > 0 ? round(($admitted / $capacity) * 100) : 0;
+
+        // $capacity  = 4850;
+        // $admitted  = 3781;
+        // $remaining = $capacity - $admitted;
+        // $utilisation = round(($admitted / $capacity) * 100);
+
     @endphp
 
 
     {{-- =====================================================================
-         1. MOBILE OVERLAY (dark background when the sidebar is open on phones)
+         1. PAGE CONTENT (the sidebar AND the top bar now live in app.blade.php)
     ====================================================================== --}}
-    <div x-show="sidebarOpen" x-cloak x-transition.opacity @click="sidebarOpen = false"
-         class="fixed inset-0 z-30 bg-black/50 lg:hidden"></div>
+    <main class="space-y-5 p-4 sm:p-6">
+
+        {{-- ============================================================
+             3b. WELCOME MESSAGE + DATE
+        ============================================================= --}}
+        <livewire:import.welcome-message>
 
 
-    {{-- =====================================================================
-         2. SIDEBAR
-    ====================================================================== --}}
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-           class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden bg-gradient-to-b from-[#0a5c2e] via-[#06431f] to-[#032a14] text-white transition-transform duration-200 lg:translate-x-0">
 
-        {{-- 2a. Logo --}}
-        <div class="flex justify-center px-4 pb-4 pt-4">
-            {{-- Put your logo in public/images/logo.png --}}
-            <img src="{{ asset('images/logo.png') }}" alt="FUDMA Logo"
-                 class="h-24 w-24 rounded-full bg-white object-contain p-1"
-                 onerror="this.style.display='none'">
-        </div>
-
-        {{-- 2b. Menu links --}}
-        <nav class="flex-1 space-y-1 px-3 pt-2">
-            @foreach ($menu as $item)
-                <a href="{{ $item['href'] }}"
-                   class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition
-                          {{ $item['active'] ? 'bg-[#0f7a3d] text-white shadow' : 'text-green-50/90 hover:bg-white/10' }}">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$item['icon']] }}" />
-                    </svg>
-                    {{ $item['label'] }}
-                </a>
-            @endforeach
-        </nav>
-
-        {{-- 2c. Motto at the bottom --}}
-        <div class="px-6 pb-8 pt-6 text-sm italic leading-snug text-green-100/70">
-            Building a brighter<br>future through quality<br>education
-        </div>
-    </aside>
+        {{-- ============================================================
+             3c. STAT CARDS (5 cards on top)
+        ============================================================= --}}
+        <livewire:import.start-cards>
 
 
-    {{-- =====================================================================
-         3. MAIN AREA (everything to the right of the sidebar)
-    ====================================================================== --}}
-    <div class="lg:pl-64">
+        {{-- ============================================================
+             3d. CHARTS ROW: bar chart (left) + faculty doughnut (right)
+        ============================================================= --}}
+        <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
 
-        {{-- ================================================================
-             3a. TOP BAR (university name, notification bell, admin dropdown)
-        ================================================================= --}}
-        <header class="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-            <div class="flex items-center gap-3">
-                {{-- Hamburger (phones only) --}}
-                <button @click="sidebarOpen = true" class="rounded-md p-2 text-slate-600 hover:bg-slate-100 lg:hidden">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['menu'] }}" />
-                    </svg>
-                </button>
-
-                <img src="{{ asset('images/logo.png') }}" alt="" class="hidden h-9 w-9 rounded-full object-contain sm:block"
-                     onerror="this.style.display='none'">
-                <div class="leading-tight">
-                    <p class="text-sm font-bold text-slate-900 sm:text-base">Federal University Dutsin-Ma</p>
-                    <p class="text-xs text-slate-500">Integrity &amp; Service</p>
+            {{-- 3d-1. Applications by Academic Session (bar chart) --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-semibold text-slate-900">Applications by Academic Session</h2>
+                    <select class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600">
+                        <option>All Sessions</option>
+                        @foreach ($sessions['labels'] as $label)
+                            <option>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mt-4 h-64" wire:ignore>
+                    <canvas id="sessionChart"></canvas>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 sm:gap-6">
-                {{-- Notification bell --}}
-                <button class="relative rounded-full p-2 text-slate-600 hover:bg-slate-100">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['bell'] }}" />
-                    </svg>
-                    <span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold text-white">3</span>
-                </button>
+            {{-- 3d-2. Applications by Faculty (doughnut chart + legend) --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h2 class="font-semibold text-slate-900">Applications by Faculty</h2>
 
-                {{-- Admin dropdown (Alpine.js) --}}
-                <div x-data="{ open: false }" class="relative">
-                    <button @click="open = !open" @click.outside="open = false" class="flex items-center gap-3">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#0a5c2e] text-white">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['user'] }}" />
-                            </svg>
-                        </span>
-                        <span class="hidden text-left leading-tight sm:block">
-                            <span class="block text-sm font-semibold text-slate-900">Admin</span>
-                            <span class="block text-xs text-slate-500">Administrator</span>
-                        </span>
-                        <svg class="hidden h-4 w-4 text-slate-500 sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['chevron'] }}" />
-                        </svg>
-                    </button>
-
-                    <div x-show="open" x-cloak x-transition
-                         class="absolute right-0 mt-2 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                        <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Profile</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Settings</a>
-                        <form method="POST" action="#">
-                            @csrf
-                            <button class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50">Logout</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-
-        <main class="space-y-5 p-4 sm:p-6">
-
-            {{-- ============================================================
-                 3b. WELCOME MESSAGE + DATE
-            ============================================================= --}}
-            <section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Welcome back, Admin 👋</h1>
-                    <p class="text-sm text-slate-500">Here's what's happening at Federal University Dutsin-Ma</p>
-                </div>
-                <div class="flex items-center gap-2 text-sm text-slate-600">
-                    <svg class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['calendar'] }}" />
-                    </svg>
-                    <div class="leading-tight">
-                        <p>{{ now()->format('l, d F Y') }}</p>
-                        <p>{{ now()->format('h:i A') }}</p>
-                    </div>
-                </div>
-            </section>
-
-
-            {{-- ============================================================
-                 3c. STAT CARDS (5 cards on top)
-            ============================================================= --}}
-            <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                @foreach ($stats as $stat)
-                    <div class="rounded-xl border p-4 {{ $stat['card'] }}">
-                        <div class="flex items-center gap-4">
-                            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white {{ $stat['iconBg'] }}">
-                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$stat['icon']] }}" />
-                                </svg>
-                            </span>
-                            <div>
-                                <p class="text-xs font-medium text-slate-700">{{ $stat['label'] }}</p>
-                                <p class="text-3xl font-bold text-slate-900">{{ number_format($stat['value']) }}</p>
-                            </div>
-                        </div>
-                        <div class="mt-4 flex items-center gap-2 text-xs">
-                            <span class="flex items-center gap-1 font-semibold {{ $stat['color'] === 'green' ? 'text-green-700' : 'text-red-600' }}">
-                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$stat['dir']] }}" />
-                                </svg>
-                                {{ $stat['change'] }}
-                            </span>
-                            <span class="text-slate-500">vs last session</span>
+                {{-- Pie chart on the left, write-up on the right (stacks only on phones) --}}
+                <div class="mt-4 flex flex-col items-center gap-5 sm:flex-row">
+                    {{-- Doughnut with centre text --}}
+                    <div class="relative h-40 w-40 shrink-0 xl:h-36 xl:w-36" wire:ignore>
+                        <canvas id="facultyChart"></canvas>
+                        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="text-xl font-bold text-slate-900">{{ number_format($totalApplications) }}</span>
+                            <span class="text-[11px] text-slate-500">Total Applications</span>
                         </div>
                     </div>
-                @endforeach
-            </section>
 
-
-            {{-- ============================================================
-                 3d. CHARTS ROW: bar chart (left) + faculty doughnut (right)
-            ============================================================= --}}
-            <section class="grid grid-cols-1 gap-5 xl:grid-cols-5">
-
-                {{-- 3d-1. Applications by Academic Session (bar chart) --}}
-                <div class="rounded-xl border border-slate-200 bg-white p-5 xl:col-span-3">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-slate-900">Applications by Academic Session</h2>
-                        <select class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600">
-                            <option>All Sessions</option>
-                            @foreach ($sessions['labels'] as $label)
-                                <option>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mt-4 h-64" wire:ignore>
-                        <canvas id="sessionChart"></canvas>
-                    </div>
-                </div>
-
-                {{-- 3d-2. Applications by Faculty (doughnut chart + legend) --}}
-                <div class="rounded-xl border border-slate-200 bg-white p-5 xl:col-span-2">
-                    <h2 class="font-semibold text-slate-900">Applications by Faculty</h2>
-
-                    <div class="mt-4 flex flex-col items-center gap-4 sm:flex-row">
-                        {{-- Doughnut with centre text --}}
-                        <div class="relative h-48 w-48 shrink-0" wire:ignore>
-                            <canvas id="facultyChart"></canvas>
-                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                                <span class="text-xl font-bold text-slate-900">{{ number_format($totalApplications) }}</span>
-                                <span class="text-[11px] text-slate-500">Total Applications</span>
-                            </div>
-                        </div>
-
-                        {{-- Legend --}}
-                        <ul class="w-full space-y-3 text-sm">
-                            @foreach ($faculties as $f)
-                                <li class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-0">
-                                    <span class="flex items-center gap-2 text-slate-700">
-                                        <span class="h-3 w-3 shrink-0 rounded-full" style="background: {{ $f['color'] }}"></span>
-                                        {{ $f['name'] }}
-                                    </span>
-                                    <span class="whitespace-nowrap text-slate-700">
-                                        {{ $f['count'] }}
-                                        <span class="ml-1 text-slate-500">({{ round(($f['count'] / $totalApplications) * 100) }}%)</span>
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-
-            {{-- ============================================================
-                 3e. THIRD ROW: gender + top programmes + capacity
-            ============================================================= --}}
-            <section class="grid grid-cols-1 gap-5 lg:grid-cols-3">
-
-                {{-- 3e-1. Applicant Distribution by Gender (pie chart) --}}
-                <div class="rounded-xl border border-slate-200 bg-white p-5">
-                    <h2 class="font-semibold text-slate-900">Applicant Distribution by Gender</h2>
-                    <div class="mt-4 flex items-center gap-6">
-                        <div class="h-36 w-36 shrink-0" wire:ignore>
-                            <canvas id="genderChart"></canvas>
-                        </div>
-                        <ul class="space-y-4 text-sm">
-                            <li class="flex items-start gap-2">
-                                <span class="mt-1 h-3 w-3 rounded-full bg-[#0a5c2e]"></span>
-                                <div>
-                                    <p class="font-medium text-slate-800">Male</p>
-                                    <p class="text-slate-600">{{ $male }} ({{ round($male / $genderTotal * 100) }}%)</p>
-                                </div>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <span class="mt-1 h-3 w-3 rounded-full bg-[#c9a867]"></span>
-                                <div>
-                                    <p class="font-medium text-slate-800">Female</p>
-                                    <p class="text-slate-600">{{ $female }} ({{ round($female / $genderTotal * 100) }}%)</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                {{-- 3e-2. Most Applied-for Programmes (progress bars) --}}
-                <div class="rounded-xl border border-slate-200 bg-white p-5">
-                    <h2 class="font-semibold text-slate-900">Most Applied-for Programmes</h2>
-                    <ul class="mt-4 space-y-4">
-                        @foreach ($programmes as $p)
-                            <li class="grid grid-cols-12 items-center gap-2 text-xs">
-                                <span class="col-span-5 text-slate-700">{{ $p['name'] }}</span>
-                                <div class="col-span-5 h-2 overflow-hidden rounded-full bg-slate-200">
-                                    <div class="h-full rounded-full bg-[#0a5c2e]" style="width: {{ ($p['count'] / $maxProgramme) * 100 }}%"></div>
-                                </div>
-                                <span class="col-span-2 text-right text-slate-700">{{ $p['count'] }} ({{ $p['percent'] }}%)</span>
+                    {{-- Legend --}}
+                    <ul class="w-full min-w-0 flex-1 space-y-2.5 text-xs">
+                        @foreach ($faculties as $f)
+                            <li class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 last:border-0">
+                                <span class="flex min-w-0 items-center gap-2 text-slate-700">
+                                    <span class="h-3 w-3 shrink-0 rounded-full" style="background: {{ $f['color'] }}"></span>
+                                    {{ $f['name'] }}
+                                </span>
+                                <span class="whitespace-nowrap text-slate-700">
+                                    {{ $f['count'] }}
+                                    <span class="ml-1 text-slate-500">({{ round(($f['count'] / $totalApplications) * 100) }}%)</span>
+                                </span>
                             </li>
                         @endforeach
                     </ul>
                 </div>
+            </div>
+        </section>
 
-                {{-- 3e-3. Programme Capacity Utilisation (ring chart) --}}
-                <div class="rounded-xl border border-slate-200 bg-white p-5">
-                    <h2 class="font-semibold text-slate-900">Programme Capacity Utilisation</h2>
-                    <div class="mt-4 flex items-center gap-6">
-                        <div class="text-center">
-                            <div class="relative mx-auto h-32 w-32" wire:ignore>
-                                <canvas id="capacityChart"></canvas>
-                                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                    <span class="text-xl font-bold text-slate-900">{{ $utilisation }}%</span>
-                                </div>
-                            </div>
-                            <p class="mt-2 text-xs text-slate-600">Overall Utilisation</p>
-                        </div>
-                        <dl class="flex-1 space-y-4 text-sm">
-                            <div class="flex justify-between"><dt class="text-slate-700">Total Capacity</dt><dd class="font-semibold">{{ number_format($capacity) }}</dd></div>
-                            <div class="flex justify-between"><dt class="text-slate-700">Total Admitted</dt><dd class="font-semibold">{{ number_format($admitted) }}</dd></div>
-                            <div class="flex justify-between"><dt class="text-slate-700">Remaining</dt><dd class="font-semibold">{{ number_format($remaining) }}</dd></div>
-                        </dl>
+
+        {{-- ============================================================
+             3e. THIRD ROW: gender + top programmes + capacity
+        ============================================================= --}}
+        <section class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+
+            {{-- 3e-1. Applicant Distribution by Gender (pie chart) --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h2 class="font-semibold text-slate-900">Applicant Distribution by Gender</h2>
+                <div class="mt-4 flex items-center gap-6">
+                    <div class="h-36 w-36 shrink-0" wire:ignore>
+                        <canvas id="genderChart"></canvas>
                     </div>
+                    <ul class="space-y-4 text-sm">
+                        <li class="flex items-start gap-2">
+                            <span class="mt-1 h-3 w-3 rounded-full bg-[#0a5c2e]"></span>
+                            <div>
+                                <p class="font-medium text-slate-800">Male</p>
+                                <p class="text-slate-600">{{ $male }} ({{ round($male / $genderTotal * 100) }}%)</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="mt-1 h-3 w-3 rounded-full bg-[#c9a867]"></span>
+                            <div>
+                                <p class="font-medium text-slate-800">Female</p>
+                                <p class="text-slate-600">{{ $female }} ({{ round($female / $genderTotal * 100) }}%)</p>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
-            </section>
+            </div>
 
+            {{-- 3e-2. Most Applied-for Programmes (progress bars) --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h2 class="font-semibold text-slate-900">Most Applied-for Programmes</h2>
+                <ul class="mt-4 space-y-4">
+                    @foreach ($programmes as $p)
+                        <li class="grid grid-cols-12 items-center gap-2 text-xs">
+                            <span class="col-span-5 text-slate-700">{{ $p['name'] }}</span>
+                            <div class="col-span-5 h-2 overflow-hidden rounded-full bg-slate-200">
+                                <div class="h-full rounded-full bg-[#0a5c2e]" style="width: {{ ($p['count'] / $maxProgramme) * 100 }}%"></div>
+                            </div>
+                            <span class="col-span-2 text-right text-slate-700">{{ $p['count'] }} ({{ $p['percent'] }}%)</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
 
-            {{-- ============================================================
-                 3f. RECENT APPLICATIONS TABLE
-            ============================================================= --}}
-            <section class="rounded-xl border border-slate-200 bg-white p-5">
-                <div class="flex items-center justify-between">
-                    <h2 class="font-semibold text-slate-900">Recent Applications</h2>
-                    <a href="#" class="flex items-center gap-1 text-xs font-medium text-[#0a5c2e] underline">
-                        View All
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['right'] }}" />
-                        </svg>
-                    </a>
+            {{-- 3e-3. Programme Capacity Utilisation (ring chart) --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h2 class="font-semibold text-slate-900">Programme Capacity Utilisation</h2>
+                <div class="mt-4 flex items-center gap-6">
+                    <div class="text-center">
+                        <div class="relative mx-auto h-32 w-32" wire:ignore>
+                            <canvas id="capacityChart"></canvas>
+                            <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <span class="text-xl font-bold text-slate-900">{{ $utilisation }}%</span>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-600">Overall Utilisation</p>
+                    </div>
+                    <dl class="flex-1 space-y-4 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-700">Total Capacity</dt><dd class="font-semibold">{{ number_format($capacity) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-700">Total Admitted</dt><dd class="font-semibold">{{ number_format($admitted) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-700">Remaining</dt><dd class="font-semibold">{{ number_format($remaining) }}</dd></div>
+                    </dl>
                 </div>
+            </div>
+        </section>
 
-                <div class="mt-3 overflow-x-auto">
-                    <table class="w-full min-w-[700px] text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-700">
-                            <tr>
-                                <th class="px-3 py-2 font-semibold">Application No.</th>
-                                <th class="px-3 py-2 font-semibold">Applicant Name</th>
-                                <th class="px-3 py-2 font-semibold">Programme</th>
-                                <th class="px-3 py-2 font-semibold">Academic Session</th>
-                                <th class="px-3 py-2 font-semibold">Status</th>
-                                <th class="px-3 py-2 font-semibold">Application Date</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach ($recent as $row)
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-3 py-3 text-[#0a5c2e]">{{ $row['no'] }}</td>
-                                    <td class="px-3 py-3 text-slate-700">{{ $row['name'] }}</td>
-                                    <td class="px-3 py-3 text-slate-700">{{ $row['programme'] }}</td>
-                                    <td class="px-3 py-3 text-slate-700">{{ $row['session'] }}</td>
-                                    <td class="px-3 py-3">
-                                        <span class="rounded-full border px-3 py-0.5 font-medium {{ $statusClass[$row['status']] }}">{{ $row['status'] }}</span>
-                                    </td>
-                                    <td class="px-3 py-3 text-slate-700">{{ $row['date'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </section>
 
-        </main>
-    </div>
+        {{-- ============================================================
+             3f. RECENT APPLICATIONS TABLE
+        ============================================================= --}}
+        <livewire:import.recent-application>
+
+    </main>
 
 
     {{-- =====================================================================
@@ -494,221 +355,4 @@
     </script>
     @endscript
 
-</div> --}}
-
-
-{{-- 
-    FILE: resources/views/components/layouts/app.blade.php
-    This is the main layout. The dashboard page is injected into {{ $slot }}.
---}}
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ $title ?? 'Dashboard' }} | Federal University Dutsin-Ma</title>
-
-    {{-- Font (Inter) --}}
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet">
-
-    {{-- Tailwind CSS (comes from Vite: resources/css/app.css) --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    {{-- Chart.js (used for the bar chart and the doughnut/pie charts) --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-    {{-- Livewire styles --}}
-    @livewireStyles
-
-    <style>
-        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-        [x-cloak] { display: none !important; }
-    </style>
-</head>
-
-<body class="bg-[#f4f7f5] text-slate-800 antialiased">
-
-    {{-- The page content (our dashboard) goes here --}}
-    {{ $slot }}
-
-    {{-- Livewire scripts (Livewire 3 already includes Alpine.js, so do NOT load Alpine again) --}}
-    @livewireScripts
-</body>
-</html>
-
-
-
-
-1. ADMIN TABLE
-
-- Admin ID
-- Name
-- Email
-- Password
-- Role
-- Account Status
-- Created At
-- Updated At
-
-2. ACADEMIC SESSION TABLE
-
-- Session ID
-- Session Name (e.g., 2024/2025)
-- Start Year
-- End Year
-- Application Start Date
-- Application End Date
-- Created At
-- Updated At
-
-3. FACULTY TABLE
-
-- Faculty ID
-- Faculty Name
-- Faculty Code
-- Created At
-- Updated At
-
-4. DEPARTMENT TABLE
-
-- Department ID
-- Faculty ID
-- Department Name
-- Department Code
-- Created At
-- Updated At
-
-Relationship: Faculty ID references the Faculty table.
-
-5. PROGRAMME TABLE
-
-- Programme ID
-- Department ID
-- Programme Name
-- Degree/Award Type
-- Duration in Years
-- Status
-- Created At
-- Updated At
-
-Relationship: Department ID references the Department table.
-
-6. APPLICANT TABLE
-
-- Applicant ID
-- Applicant Number
-- First Name
-- Middle Name (Optional)
-- Last Name
-- Gender
-- State of Origin (Optional)
-- Created At
-- Updated At
-
-Purpose: Stores basic information about each person applying to the university, whether admitted or rejected.
-
-7. APPLICATION TABLE
-
-- Application ID
-- Applicant ID
-- Academic Session ID
-- Programme ID
-- Application Number
-- Application Date
-- UTME Score
-- Post-UTME Score (Optional)
-- Aggregate Score (Optional)
-- Application Status
-- Admission Date (Optional)
-- Created At
-- Updated At
-
-Relationships:
-
-- Applicant ID references the Applicant table.
-- Academic Session ID references the Academic Session table.
-- Programme ID references the Programme table.
-
-8. PROGRAMME CAPACITY TABLE
-
-- Capacity ID
-- Academic Session ID
-- Programme ID
-- Approved Quota Capacity
-- Created At
-- Updated At
-
-Relationships:
-
-- Academic Session ID references the Academic Session table.
-- Programme ID references the Programme table.
-
-9. PROGRAMME CUTOFF SCORE TABLE
-
-- Cutoff ID
-- Academic Session ID
-- Programme ID
-- UTME Cutoff Score
-- Post-UTME Cutoff Score (Optional)
-- Aggregate Cutoff Score (Optional)
-- Created At
-- Updated At
-
-Relationships:
-
-- Academic Session ID references the Academic Session table.
-- Programme ID references the Programme table.
-
-10. SAVED DASHBOARD FILTER TABLE (OPTIONAL)
-
-- Filter ID
-- Admin ID
-- Filter Name
-- Saved Filter Settings
-- Created At
-- Updated At
-
-Relationship: Admin ID references the Admin table.
-
-This table can be omitted if administrators do not need to save their preferred filters.
-
-ADMIN DASHBOARD METRICS
-
-- Total Applicants
-- Total Applications
-- Total Admitted Applications
-- Total Rejected Applications
-- Pending Applications
-- Total Faculties
-- Total Departments
-- Total Programmes
-- Most Applied-for Programme
-- Overall Admission Rate
-
-DATA VISUALISATION AND ANALYSIS METRICS
-
-- Applications by Academic Session
-- Admissions by Academic Session
-- Applications by Faculty
-- Applications by Department
-- Most Applied-for Programmes
-- Admission Rate by Department
-- Applicant Distribution by Gender
-- Applicant Distribution by State
-- Average UTME Score by Department
-- Average Post-UTME Score by Department
-- Cutoff Score Changes Across Academic Sessions
-- Programme Capacity Utilisation
-- Year-over-Year Applicant Growth
-
-MAIN DATABASE RELATIONSHIPS
-
-- One Faculty has many Departments.
-- One Department has many Programmes.
-- One Applicant can have multiple Applications.
-- One Academic Session has many Applications.
-- One Programme can receive many Applications.
-- One Programme can have a different capacity and cutoff score for each Academic Session.
+</div>

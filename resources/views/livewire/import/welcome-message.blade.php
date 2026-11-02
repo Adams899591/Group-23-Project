@@ -26,22 +26,41 @@
 
     @endphp
 
-        {{-- ============================================================
-             3b. WELCOME MESSAGE + DATE
-        ============================================================= --}}
-        <section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Welcome back, Admin 👋</h1>
-                <p class="text-sm text-slate-500">Here's what's happening at Federal University Dutsin-Ma</p>
-            </div>
-            <div class="flex items-center gap-2 text-sm text-slate-600">
-                <svg class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['calendar'] }}" />
-                </svg>
-                <div class="leading-tight">
-                    <p>{{ now()->format('l, d F Y') }}</p>
-                    <p>{{ now()->format('h:i A') }}</p>
-                </div>
-            </div>
-        </section>
+    {{-- =====================================================================
+     WELCOME MESSAGE + CSV UPLOAD ICON (replaces the date block)
+     The icon "blooms": two soft rings keep expanding and fading behind it.
+     Clicking it opens the CSV upload page (create the route /csv-upload later).
+    ====================================================================== --}}
+<section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">Welcome back, Admin 👋</h1>
+        <p class="text-sm text-slate-500">Here's what's happening at Federal University Dutsin-Ma</p>
+    </div>
+
+    {{-- CSV upload icon --}}
+    <a href="{{ route('csv-upload') }}" aria-label="Upload a CSV file to create a chart" wire:navigate
+       class="group relative flex h-12 w-12 shrink-0 items-center justify-center self-start">
+
+        {{-- Bloom ring 1 (green) --}}
+        <span class="absolute inline-flex h-full w-full rounded-full bg-[#0a5c2e]/30 animate-ping motion-reduce:animate-none"
+              style="animation-duration: 2.2s"></span>
+
+        {{-- Bloom ring 2 (gold), starts a little later so the rings flow one after the other --}}
+        <span class="absolute inline-flex h-full w-full rounded-full bg-[#b8923e]/30 animate-ping motion-reduce:animate-none"
+              style="animation-duration: 2.2s; animation-delay: 1.1s"></span>
+
+        {{-- The button itself --}}
+        <span class="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#0a5c2e] text-white shadow-lg shadow-[#0a5c2e]/30 transition duration-300 group-hover:scale-110 group-hover:bg-[#0f7a3d] group-active:scale-95">
+            {{-- upload arrow icon --}}
+            <svg class="h-6 w-6 transition duration-300 group-hover:-translate-y-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+        </span>
+
+        {{-- Tooltip on hover --}}
+        <span class="pointer-events-none absolute right-0 top-14 z-10 whitespace-nowrap rounded-md bg-slate-800 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow transition group-hover:opacity-100">
+            Upload CSV &amp; create chart
+        </span>
+    </a>
+</section>
 </section>

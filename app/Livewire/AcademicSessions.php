@@ -1,22 +1,4 @@
 <?php
-
-// namespace App\Livewire;
-
-// use Livewire\Component;
-
-// class AcademicSessions extends Component
-// {
-//     public function render()
-//     {
-//         return view('livewire.academic-sessions')->layout("layouts.app");
-//     }
-// }
-
-// FILE: app/Livewire/AcademicSessions.php
-// Lists all academic sessions and lets the admin add a new one.
-// When a session is added, its id is also saved into programme_capacities and programme_cutoff_scores
-// (one row for every programme), because those tables depend on academic_session_id.
-
 namespace App\Livewire;
 
 use App\Models\AcademicSession;

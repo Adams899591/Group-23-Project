@@ -156,21 +156,7 @@
              3b. WELCOME MESSAGE + DATE
         ============================================================= --}}
         <livewire:import.welcome-message>
-        {{-- <section class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Welcome back, Admin 👋</h1>
-                <p class="text-sm text-slate-500">Here's what's happening at Federal University Dutsin-Ma</p>
-            </div>
-            <div class="flex items-center gap-2 text-sm text-slate-600">
-                <svg class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons['calendar'] }}" />
-                </svg>
-                <div class="leading-tight">
-                    <p>{{ now()->format('l, d F Y') }}</p>
-                    <p>{{ now()->format('h:i A') }}</p>
-                </div>
-            </div>
-        </section> --}}
+
 
 
         {{-- ============================================================
@@ -188,10 +174,11 @@
             <div class="rounded-xl border border-slate-200 bg-white p-5">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold text-slate-900">Applications by Academic Session</h2>
-                    <select class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600">
-                        <option>All Sessions</option>
+                    {{-- The options come from the database ($sessions['labels']). Picking one filters the bar chart below. --}}
+                    <select id="sessionFilter" class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600">
+                        <option value="">All Sessions</option>
                         @foreach ($sessions['labels'] as $label)
-                            <option>{{ $label }}</option>
+                            <option value="{{ $label }}">{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -321,7 +308,7 @@
         const green = '#0a5c2e', gold = '#b8923e', tan = '#c9a867';
 
         // 4a. Bar chart: Applications by Academic Session
-        new Chart(document.getElementById('sessionChart'), {
+        const sessionChart = new Chart(document.getElementById('sessionChart'), {
             type: 'bar',
             data: {
                 labels: @js($sessions['labels']),
@@ -336,6 +323,26 @@
                 plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
                 scales: { y: { beginAtZero: true, grid: { color: '#eef0f2' } }, x: { grid: { display: false } } },
             },
+        });
+
+        // 4a-2. Session filter: show one session, or all sessions again (no page reload)
+        const allSessions = {
+            labels:       @js($sessions['labels']),
+            applications: @js($sessions['applications']),
+            admitted:     @js($sessions['admitted']),
+        };
+
+        document.getElementById('sessionFilter')?.addEventListener('change', (event) => {
+            const picked = event.target.value;                 // '' = All Sessions
+            const i      = allSessions.labels.indexOf(picked);
+            const show   = (picked === '' || i === -1)
+                ? allSessions
+                : { labels: [picked], applications: [allSessions.applications[i]], admitted: [allSessions.admitted[i]] };
+
+            sessionChart.data.labels           = show.labels;
+            sessionChart.data.datasets[0].data = show.applications;
+            sessionChart.data.datasets[1].data = show.admitted;
+            sessionChart.update();
         });
 
         // 4b. Doughnut: Applications by Faculty

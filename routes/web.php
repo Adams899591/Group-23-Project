@@ -2,6 +2,7 @@
 
 use App\Livewire\AcademicSessions;
 use App\Livewire\Applicants;
+use App\Livewire\CsvUpload;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
 use App\Livewire\Programmes;
@@ -17,6 +18,7 @@ Route::prefix("fudma")->group(function(){
     Route::get('/applicants', Applicants::class)->name("applicants");
     Route::get('/programmes', Programmes::class)->name("programmes");
     Route::get('/academicSessions', AcademicSessions::class)->name("academicSessions");
+    Route::get('/csv-upload', CsvUpload::class)->name("csv-upload");
 });
 
 
