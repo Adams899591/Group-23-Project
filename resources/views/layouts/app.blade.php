@@ -173,7 +173,7 @@
                          class="absolute right-0 mt-2 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                         <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Profile</a>
                         <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Settings</a>
-                        <form method="POST" action="#">
+                        <form method="POST" action="{{route("fudma.logout")}}">
                             @csrf
                             <button class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50">Logout</button>
                         </form>

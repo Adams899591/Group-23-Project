@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Auth\LogoutController;
 use App\Livewire\AcademicSessions;
 use App\Livewire\Applicants;
+use App\Livewire\Auth\Login;
 use App\Livewire\CsvUpload;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
@@ -12,8 +14,14 @@ Route::get('/', function () {
 });
 
 
+Route::prefix("auth-fudma")->group(function(){
+    Route::get('/login', Login::class)->name("login");
+});
 
-Route::prefix("fudma")->group(function(){
+Route::post("auth-fudma-logout", [LogoutController::class, "logout"])->name("fudma.logout");
+
+
+Route::middleware("auth")->prefix("fudma")->group(function(){
     Route::get('/dashboard', Dashboard::class)->name("dashboard");
     Route::get('/applicants', Applicants::class)->name("applicants");
     Route::get('/programmes', Programmes::class)->name("programmes");

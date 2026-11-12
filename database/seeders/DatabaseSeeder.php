@@ -1,28 +1,5 @@
 <?php
 
-// namespace Database\Seeders;
-
-// use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-// use Illuminate\Database\Seeder;
-
-// class DatabaseSeeder extends Seeder
-// {
-//     use WithoutModelEvents;
-
-//     /**
-//      * Seed the application's database.
-//      */
-//     public function run(): void
-//     {
-//         // User::factory(10)->create();
-
-//         User::factory()->create([
-//             'name' => 'Test User',
-//             'email' => 'test@example.com',
-//         ]);
-//     }
-// }
 
 namespace Database\Seeders;
 
@@ -42,7 +19,7 @@ class DatabaseSeeder extends Seeder
 
         $applicantCount = 50; // Change to 5000 for 5,000 applicants.
         $applicationsPerApplicant = 2; // Each applicant gets 1–2 applications.
-        $batchSize = 500; // Number of records inserted per batch.
+        $batchSize = 5000; // Number of records inserted per batch.
 
         /*
         |--------------------------------------------------------------------------
@@ -50,9 +27,9 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $adminId = DB::table('admins')->insertGetId([
-            'name' => 'System Administrator',
-            'email' => 'admin@example.com',
+        $adminId = DB::table('users')->insertGetId([
+            'name' => 'Dev Usman Adams',
+            'email' => 'usmanadams551@gmail.com',
             'password' => Hash::make('password123'),
             'role' => 'admin',
             'is_active' => true,
@@ -397,7 +374,7 @@ class DatabaseSeeder extends Seeder
         */
 
         DB::table('saved_dashboard_filters')->insert([
-            'admin_id' => $adminId,
+            'user_id' => $adminId,
             'filter_name' => 'Current Academic Session',
             'saved_filter_settings' => json_encode([
                 'academic_session_id' => end($sessionIds),

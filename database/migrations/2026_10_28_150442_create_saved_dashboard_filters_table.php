@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id(); // Filter ID
 
             // Relationship: Admin ID references the admins table.
-            $table->foreignId('admin_id')
-                ->constrained('admins')
+            $table->foreignId('user_id')
+                ->constrained('users')
                 ->cascadeOnDelete();
 
             $table->string('filter_name');
